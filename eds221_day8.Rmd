@@ -1,0 +1,238 @@
+---
+title: "Data Visualization"
+author: "Javier Patron"
+date: "2022-08-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+
+library(patchwork)
+library(ggrepel)
+library(gghighlight)
+library(paletteer)
+library(ggbeeswarm)
+library(gapminder)
+library(sf)
+```
+
+```{r}
+lizards <- read_csv(here::here("data_tidy", "lizards.csv"))
+```
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, y = weight))+
+  geom_point()
+```
+
+Create a histogram for total length
+
+```{r}
+plot1 <- ggplot(lizards, aes(x = total_length)) + 
+  geom_histogram(aes(color = site,
+                     size = 1,
+                     linetype= "--"))
+
+plot1
+
+```
+
+```{r}
+
+ggplot(data = lizards, aes(x=total_length, y = weight))+
+  geom_point(shape = 22)
+
+```
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(aes(color = common_name, 
+                size = total_length),
+             alpha = 0.5)
+```
+
+```{r}
+
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(color = "darkblue") +
+  facet_wrap(~common_name)
+```
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point() +
+  facet_grid(~common_name)
+
+```
+
+total amount of lizard by just using common name
+
+```{r}
+table <- lizards |> 
+  group_by(common_name) |> 
+  summarise(count = n())
+
+```
+
+graph your new table
+
+```{r}
+ggplot(table, aes(y = fct_reorder(common_name, count),
+                  x = count)) +
+  geom_col()
+```
+
+```{r}
+
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(aes(color = common_name)) +
+  facet_wrap(~ scientific_name) + 
+  theme_dark() + 
+  labs(title = "Cool Lizards",
+       subtitle = "Total Length vs. Weight",
+       x = "Total Length (mm)",
+       y = "Weight (g)")
+
+
+```
+
+```{r}
+ x <-list(numbers = c(1,2,3), letters = c("a", "b"))
+
+unlist(x, recursive = FALSE, use.names = FALSE)
+```
+
+```{r}
+
+
+
+```
+
+## Scales
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(aes(color = weight)) +
+  scale_color_gradient(low = "purple", high = "red")
+
+                        
+
+```
+
+Create your own pallett of gradient colors
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(aes(color = weight)) +
+  scale_color_gradientn(colors = c("magenta", "cyan4", "darkorchid3", "dodgerblue", "green", "yellow"))
+```
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(aes(color = total_length)) +
+  scale_color_steps2(low = "orange", 
+                    mid = "red", 
+                    high = "black",
+                    midpoint = 150,
+                    breaks = c(50,75,150))
+```
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, 
+                           y = weight)) +
+  geom_point(aes(color = total_length)) +
+  scale_color_stepsn(colors = c("orange", "red", "purple"),
+                     breaks = seq(from = 0, 
+                                  to = 300,
+                                  by = 60))
+```
+
+Make a horizontal boxplot with common name on the y-axis, total length on the x-axis, with boxplot fill changing based on the common name
+
+new column, rename the column or renaming, order the names,
+
+```{r}
+
+lizards_median <- lizards |> 
+  mutate(common_name = fct_reorder(common_name, total_length, .fun = median))
+
+
+ggplot(lizards, aes(y=common_name, x= total_length)) +
+  geom_boxplot(aes(fill = common_name))
+
+
+ggplot(lizards_median, aes(y= common_name, x = total_length)) +
+  geom_boxplot(aes(fill = common_name), show.legend = FALSE) +
+  scale_fill_paletteer_d(palette = "beyonce::X1") +
+  theme_minimal()
+
+```
+
+## Make things look bad
+
+```{r}
+ggplot(data = lizards, aes(x=total_length, y = weight)) + 
+  geom_point(aes(color = weight))+
+  theme_dark()+
+  theme(panel.grid = element_line(color = "white"),
+        panel.grid.minor.y = element_blank(),
+        axis.title.x = element_text(color = "magenta"),
+        axis.text.y = element_text(color = "green"),
+        text = element_text (size = 20),
+        panel.background = element_rect(color = "red", fill = "white")) + 
+  annotate("text", x = 300, y = 50, label = "whooooo", color = "blue") +
+  geom_vline(xintercept = 250, linetype = "dashed", color = "orange", size = 4)
+```
+
+Repulsive labels with `ggrepel`\`
+
+```{r}
+
+wws_lizards <- lizards |> 
+  filter(common_name == "western whiptail",
+         site == "sand")
+
+ggplot(data = wws_lizards, aes(x=total_length, y = weight)) + 
+  geom_point() + 
+    geom_text_repel(aes(label = toe_num))
+```
+
+2002 and the continent is europe
+
+```{r}
+gapminder |> 
+  filter(year == 2002, continent == "Europe") |> 
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  geom_text_repel(aes(label = country), size = 3)
+
+ggplot(data = lizards, aes(x = total_length, y = weight )) +
+  geom_point() +
+  gghighlight(weight > 30, label_key = toe_num)
+```
+
+```{r}
+
+jornada_veg <- read_sf(here::here("data_raw", "spatial_vegetation", "doc.kml"))
+
+ggplot(jornada_veg) +
+  geom_sf(aes(fill = Name)) +
+  theme_dark() +
+  scale_fill_paletteer_d(palette = "ggthemes::manyeys")
+  
+
+```
